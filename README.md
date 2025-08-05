@@ -1,2 +1,1 @@
-# TriArb-v2
-Arbitrage
+# TriArb
