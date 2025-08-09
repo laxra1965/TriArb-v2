@@ -1,0 +1,53 @@
+New Goal: Port the client-side engine to a server-side architecture.
+Phase 1: Backend Migration & Core API Development (Weeks 1-3)
+The #1 priority is to get your tested JavaScript logic running on a server that you control.
+Technology Stack Choice:
+Backend: Node.js with Express.js. Since your existing code is JavaScript, this is the most direct and fastest path. You can reuse significant portions of your arbitrage logic.
+Database: PostgreSQL. This recommendation remains unchanged. It is the best choice for securely managing user data, subscriptions, and trade records.
+Key Libraries: ccxt (the Node.js version is just as powerful), axios (for any other API calls), pg (for connecting to PostgreSQL), bcrypt (for hashing passwords), jsonwebtoken (for auth), crypto-js (for encrypting API keys).
+Task: Port the Arbitrage Logic to a Node.js Worker:
+Action: Create a new Node.js project. Isolate the arbitrage logic (market scanning, opportunity calculation, and trade execution) from your index.html and place it into a separate worker.js file.
+Modification: Replace browser-specific functions (like fetch or DOM manipulation) with Node.js equivalents. The ccxt library will handle all interactions with exchanges. This worker will be designed to run 24/7 on the server.
+Task: Build the Backend API Server (Express.js):
+Action: Create the API that will allow your future frontend and the worker to communicate with the database.
+Essential Endpoints:
+POST /api/users/register: Create a new user in the PostgreSQL database (with a hashed password).
+POST /api/users/login: Authenticate a user and return a JSON Web Token (JWT).
+POST /api/keys: Endpoint for a logged-in user to submit their exchange API keys. These keys will be encrypted using crypto-js before being saved to the database.
+POST /api/bot/toggle: Allow the user to start or stop the bot for their account. This will simply flip a boolean (is_active) in the users table.
+Task: Database Schema (PostgreSQL):
+Action: Define the tables.
+Tables:
+users: id, email, password_hash, subscription_status, is_active.
+api_keys: user_id, exchange, encrypted_api_key, encrypted_secret.
+trades: user_id, trade_details, profit, timestamp.
+Phase 2: The New "Thin Client" Frontend (Weeks 4-5)
+Your old index.html was the engine. The new frontend will be a simple, secure dashboard that only talks to your backend. All the heavy lifting happens on your server.
+Technology: React (using Create React App) or Vue.js.
+Task: Build the User Interface:
+Login/Register Pages: Forms that call the /register and /login endpoints on your backend.
+Dashboard Page (Protected): This page is only accessible after logging in.
+Displays bot status (is_active from the backend).
+Shows trade history and profit by fetching data from your backend API.
+Contains the "Start/Stop Bot" button which calls the /api/bot/toggle endpoint.
+Settings Page (Protected): A secure form for submitting API keys that sends them directly to your backend's /api/keys endpoint over HTTPS. No trading logic or secret keys will exist in the frontend code.
+Phase 3: Integration, Subscription, and Deployment (Weeks 6-7)
+This phase ties everything together into a commercial product.
+Task: Connect the Worker to the Database:
+Action: Modify the worker.js arbitrage engine.
+New Logic:
+On a loop, fetch all users from the database where is_active is true.
+For each active user, retrieve their encrypted API keys.
+Decrypt the keys in memory just long enough to perform the scanning and trading operations for that user.
+When a trade is executed, record the result in the trades table in the database.
+Task: Subscription Integration:
+Action: Integrate Stripe into your backend.
+Process:
+Create subscription plans in your Stripe dashboard.
+Use Stripe Elements on your frontend for a secure payment form.
+Create backend endpoints (/api/subscribe) to handle payment processing.
+Set up a Stripe Webhook to listen for payment events. When a payment_success event is received, update the user's subscription_status in your PostgreSQL database. The worker will only trade for users with an active subscription.
+Task: Deployment:
+Backend: Deploy the Node.js application (API server and worker) to a service like Heroku, DigitalOcean, or AWS EC2. Use a process manager like pm2 to keep it running 24/7.
+Database: Use a managed database service like AWS RDS for PostgreSQL or DigitalOcean Managed Databases.
+Frontend: Deploy the static React/Vue app to a fast, simple hosting service like Vercel or Netlify.
